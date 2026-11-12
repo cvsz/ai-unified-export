@@ -11,11 +11,13 @@ import secrets
 import shutil
 import threading
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+
+UTC = timezone.utc
 
 STAGE_WEIGHTS = {
     "host": 2, "executables": 8, "packages": 10, "runtime": 5,
