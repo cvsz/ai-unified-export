@@ -1,0 +1,363 @@
+{
+  "errors": [],
+  "generated_at": "2026-11-12T12:22:59Z",
+  "metrics": {
+    "/mnt/d/data/ai-cli-command/scripts/ai_export_monitor.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 398,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/mnt/d/data/ai-cli-command/scripts/ai_model_manager.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 432,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/mnt/d/data/ai-cli-command/scripts/ai_tools_installer.py": {
+      "CONFIDENCE.HIGH": 3,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 3,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 317,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/mnt/d/data/ai-cli-command/scripts/ai_unified_export.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 2,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 2,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 1109,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/mnt/d/data/ai-cli-command/scripts/discover_ai_server.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 370,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/mnt/d/data/ai-cli-command/scripts/export_ai_cli.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 385,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 9,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 3,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 10,
+      "SEVERITY.MEDIUM": 2,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 3011,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "41         self.mode, self.host, self.port = mode, host, port\n42         self.token = \"\"\n43         if host not in {\"127.0.0.1\", \"localhost\", \"::1\"}:\n",
+      "col_offset": 21,
+      "end_col_offset": 23,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/ai_export_monitor.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: ''",
+      "line_number": 42,
+      "line_range": [
+        42
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "22 import shutil\n23 import subprocess\n24 import sys\n",
+      "col_offset": 0,
+      "end_col_offset": 17,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/ai_tools_installer.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 23,
+      "line_range": [
+        23
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "268                 path.write_bytes(data)\n269                 proc = subprocess.run([method.get(\"interpreter\", \"sh\"), str(path)], stdin=subprocess.DEVNULL,\n270                                       timeout=timeout, check=False)\n271         else:\n",
+      "col_offset": 23,
+      "end_col_offset": 67,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/ai_tools_installer.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 269,
+      "line_range": [
+        269,
+        270
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "271         else:\n272             proc = subprocess.run(method[\"argv\"], stdin=subprocess.DEVNULL, timeout=timeout, check=False)\n273         result[\"returncode\"] = proc.returncode\n",
+      "col_offset": 19,
+      "end_col_offset": 105,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/ai_tools_installer.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 272,
+      "line_range": [
+        272
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "18 import signal\n19 import subprocess\n20 import sys\n",
+      "col_offset": 0,
+      "end_col_offset": 17,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/ai_unified_export.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 19,
+      "line_range": [
+        19
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "309 SKIP_DIRS = {\n310     \"/mnt\", \"/proc\", \"/sys\", \"/dev\", \"/run\", \"/tmp\", \"/var/tmp\",\n311     \"/var/log\", \"/var/cache\", \"/lost+found\",\n312 }\n313 SKIP_NAMES = {\n314     \".git\", \".svn\", \".hg\", \"__pycache__\", \".tox\", \".pytest_cache\",\n",
+      "col_offset": 45,
+      "end_col_offset": 51,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/ai_unified_export.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 377,
+        "link": "https://cwe.mitre.org/data/definitions/377.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Probable insecure usage of temp file/directory.",
+      "line_number": 310,
+      "line_range": [
+        309,
+        310,
+        311,
+        312
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b108_hardcoded_tmp_directory.html",
+      "test_id": "B108",
+      "test_name": "hardcoded_tmp_directory"
+    },
+    {
+      "code": "309 SKIP_DIRS = {\n310     \"/mnt\", \"/proc\", \"/sys\", \"/dev\", \"/run\", \"/tmp\", \"/var/tmp\",\n311     \"/var/log\", \"/var/cache\", \"/lost+found\",\n312 }\n313 SKIP_NAMES = {\n314     \".git\", \".svn\", \".hg\", \"__pycache__\", \".tox\", \".pytest_cache\",\n",
+      "col_offset": 53,
+      "end_col_offset": 63,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/ai_unified_export.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 377,
+        "link": "https://cwe.mitre.org/data/definitions/377.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Probable insecure usage of temp file/directory.",
+      "line_number": 310,
+      "line_range": [
+        309,
+        310,
+        311,
+        312
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b108_hardcoded_tmp_directory.html",
+      "test_id": "B108",
+      "test_name": "hardcoded_tmp_directory"
+    },
+    {
+      "code": "329     try:\n330         p = subprocess.run(\n331             args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,\n332             stderr=subprocess.STDOUT, text=True, errors=\"replace\",\n333             timeout=timeout, check=False, env={\"PATH\": os.pathsep.join(native_path_entries()),\n334                                                \"HOME\": str(Path.home()),\n335                                                \"LANG\": \"C.UTF-8\"},\n336         )\n337         out = p.stdout[:limit]\n",
+      "col_offset": 12,
+      "end_col_offset": 9,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/ai_unified_export.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 330,
+      "line_range": [
+        330,
+        331,
+        332,
+        333,
+        334,
+        335,
+        336
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "19 import shutil\n20 import subprocess\n21 import time\n",
+      "col_offset": 0,
+      "end_col_offset": 17,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/discover_ai_server.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 20,
+      "line_range": [
+        20
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "54     try:\n55         p = subprocess.run(\n56             args, stdin=subprocess.DEVNULL, capture_output=True,\n57             text=True, errors=\"replace\",\n58             timeout=timeout, check=False,\n59             env={**os.environ, \"PAGER\": \"cat\", \"GIT_PAGER\": \"cat\",\n60                  \"NO_COLOR\": \"1\", \"TERM\": \"dumb\"},\n61         )\n62         return p.stdout[:MAX_OUTPUT], p.stderr[:20000], p.returncode\n",
+      "col_offset": 12,
+      "end_col_offset": 9,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/discover_ai_server.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 55,
+      "line_range": [
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "18 import shutil\n19 import subprocess\n20 import sys\n",
+      "col_offset": 0,
+      "end_col_offset": 17,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/export_ai_cli.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 19,
+      "line_range": [
+        19
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "103     try:\n104         proc = subprocess.run(\n105             [executable, *args], stdin=subprocess.DEVNULL,\n106             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,\n107             text=True, errors=\"replace\", timeout=timeout, env=env,\n108             check=False,\n109         )\n110         return {\n",
+      "col_offset": 15,
+      "end_col_offset": 9,
+      "filename": "/mnt/d/data/ai-cli-command/scripts/export_ai_cli.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 104,
+      "line_range": [
+        104,
+        105,
+        106,
+        107,
+        108,
+        109
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    }
+  ]
+}
