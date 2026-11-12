@@ -280,6 +280,8 @@ package: validate check-tools ## Build ZIP, then verify archive integrity
 	@cd .. && zip -qr '$(PACKAGE_ABS)' '$(PROJECT_DIR)' \
 		-x '$(PROJECT_DIR)/.git/*' '$(PROJECT_DIR)/**/__pycache__/*' \
 		   '$(PROJECT_DIR)/**/*.pyc' '$(PROJECT_DIR)/ai-inventory-export/*' \
-		   '$(PROJECT_DIR)/model-export/*'
+		   '$(PROJECT_DIR)/model-export/*' \
+		   '$(PROJECT_DIR)/.ruff_cache/*' '$(PROJECT_DIR)/.pytest_cache/*' \
+		   '$(PROJECT_DIR)/.mypy_cache/*' '$(PROJECT_DIR)/.superpowers/*'
 	@unzip -t '$(PACKAGE_ABS)' >/dev/null
 	@echo 'Package created and verified: $(PACKAGE_ABS)'
