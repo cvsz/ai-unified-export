@@ -8,7 +8,7 @@
 
 | Rule | Severity | Files | Assessment |
 |------|----------|-------|------------|
-| B105 (hardcoded_password_string) | LOW | ai_export_monitor.py:42 | **False positive** - `self.token = ""` is empty string initialization, not a password |
+| B105 (hardcoded_password_string) | LOW | ai_export_monitor.py:44 | **False positive** - `self.token = ""` is empty string initialization, not a password |
 | B404 (import subprocess) | LOW | ai_unified_export.py, ai_tools_installer.py, discover_ai_server.py, export_ai_cli.py | **By design** - Tools legitimately use subprocess with fixed argument vectors, never shell |
 | B603 (subprocess_without_shell_equals_true) | LOW | ai_unified_export.py, ai_tools_installer.py, discover_ai_server.py, export_ai_cli.py | **Good practice** - Using shell=False is more secure; all calls use fixed argument arrays |
 | B108 (hardcoded_tmp_directory) | MEDIUM | ai_unified_export.py:309-311 | **False positive** - `SKIP_DIRS` contains `/tmp`, `/var/tmp` as directories to EXCLUDE from scanning, not create |
