@@ -1,0 +1,44 @@
+# Project metadata and tool configuration.
+# Runtime code depends only on the Python standard library; the tools below are
+# development-time checks (lint/tests) and are not runtime dependencies.
+
+[project]
+name = "ai-unified-export"
+version = "1.2.0"
+description = "Read-only WSL2 Ubuntu AI server/CLI inventory exporter with bounded CLI help export, live monitors, and explicit model/installer lifecycle tools"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+# Curated gate: correctness (E4/E7/E9, F), hygiene (W), imports (I), modernization (UP),
+# bugbear (B), comprehensions (C4), simplification (SIM), ruff-specific (RUF),
+# exception discipline (TRY), blind excepts (BLE), iteration/functional (FURB),
+# and performance (PERF). E501 is not selected: the monitor embeds long single-line
+# HTML/CSS/JS by design. PL complexity/magic-number style rules and TRY003 long
+# user-facing exception messages are intentionally not enforced on CLI tools.
+select = [
+    "E4", "E7", "E9", "W", "F", "I", "UP", "B", "C4", "SIM",
+    "RUF", "TRY", "BLE", "FURB", "PERF",
+]
+ignore = [
+    # CLI tools raise ValueError with long, operator-facing messages on purpose.
+    "TRY003",
+    # Raising inside a loop-bounded try is the tolerant-scan contract (per-entry failure isolation).
+    "TRY301",
+    # `try/except OSError: pass` around best-effort writes is clearer than contextlib.suppress here.
+    "SIM105",
+    # Per-entry try/except inside scan loops is deliberate fault isolation, not a hot-path accident.
+    "PERF203",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately instantiate subprocess calls without check and use mocks.
+"tests/*" = ["PLR2004"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
