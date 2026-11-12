@@ -32,4 +32,4 @@
 7. Final-Report.md (document)
 8. Git init, commit as cvsz, PR, audit as policedbc, merge as cvsz (document/apply)
 
-Status: Phase 2 starting.
+Status: All phases complete. PR #1 merged (cvsz → policedbc review → cvsz merge).

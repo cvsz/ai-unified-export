@@ -22,11 +22,17 @@ DOWNLOAD_URL       ?=
 DOWNLOAD_OUTPUT    ?=
 DOWNLOAD_SHA256    ?=
 DOWNLOAD_MAX_BYTES ?= 21474836480
+DOWNLOAD_ALLOW_HOST ?=
 OLLAMA_MODELS_DIR  ?=
 TOOLS              ?=
 TOOLS_MANAGER      ?=
 TOOLS_SCRIPT_SHA256 ?=
 TOOLS_LOG_DIR      ?= ./ai-installer-logs
+TOOLS_TIMEOUT      ?= 1800
+TOOLS_CATEGORY     ?=
+TOOLS_INSTALLED_ONLY ?=
+TOOLS_MISSING_ONLY ?=
+TOOLS_JSON         ?=
 APPLY              ?=
 
 PROFILE            ?= quick
@@ -36,6 +42,7 @@ MONITOR_PORT       ?= 8765
 MONITOR_KEEPALIVE  ?= 120
 MONITOR_TOKEN_FILE ?=
 EXCLUDE_ROOTS      ?=
+CONFIG_FILE        ?=
 
 # Full scan budgets. Increase explicitly for very large WSL installations.
 AI_MAX_ENTRIES          ?= 2000000
@@ -55,15 +62,18 @@ EXCLUDE_ROOT_ARGS := $(foreach root,$(EXCLUDE_ROOTS),--exclude-root '$(root)')
 MONITOR_TOKEN_ARGS := $(if $(MONITOR_TOKEN_FILE),--monitor-token-file '$(MONITOR_TOKEN_FILE)')
 TOOLS_MANAGER_ARGS := $(if $(TOOLS_MANAGER),--manager '$(TOOLS_MANAGER)')
 TOOLS_HASH_ARGS := $(if $(TOOLS_SCRIPT_SHA256),--script-sha256 '$(TOOLS_SCRIPT_SHA256)')
+TOOLS_TIMEOUT_ARGS := $(if $(TOOLS_TIMEOUT),--timeout '$(TOOLS_TIMEOUT)')
 APPLY_ARGS := $(if $(APPLY),--apply)
 OLLAMA_DIR_ARGS := $(if $(OLLAMA_MODELS_DIR),--models-dir '$(OLLAMA_MODELS_DIR)')
+CONFIG_ARGS := $(if $(CONFIG_FILE),--config '$(CONFIG_FILE)')
+DOWNLOAD_ALLOW_HOST_ARGS := $(foreach host,$(DOWNLOAD_ALLOW_HOST),--allow-host '$(host)')
 
 .PHONY: help list-targets check-python check-tools compile test test-verbose smoke validate \
         inventory inventory-quick inventory-full inventory-only inventory-resume \
         ai-all ai-all-quiet ai-discover ai-cli-all ai-tools ai-packages ai-servers ai-report \
         monitor-both monitor-terminal monitor-web monitor-off dashboard \
         model-export model-export-partial model-validate model-download model-validate-ollama \
-        tools-list tools-missing tools-check tools-plan tools-install tools-script-hash \
+        tools-list tools-missing tools-check tools-plan tools-install tools-script-hash tools-install-missing \
         clean package show-config
 
 help: ## Show all targets and common variables
@@ -74,7 +84,10 @@ help: ## Show all targets and common variables
 	  '  MONITOR=both|terminal|web|off' \
 	  '  AI_MAX_ENTRIES=2000000 AI_MAX_INVOCATIONS=30000' \
 	  '  AI_EXTRA_ROOTS="/home/USER/.local/share /opt/custom-ai"' \
-	  '  MODEL_FILES="model.gguf model.safetensors"'
+	  '  MODEL_FILES="model.gguf model.safetensors"' \
+	  '  CONFIG_FILE=./scan-config.json' \
+	  '  DOWNLOAD_ALLOW_HOST="huggingface.co cdn-lfs.huggingface.co"' \
+	  '  TOOLS_CATEGORY=coding TOOLS_JSON=1 TOOLS_TIMEOUT=1800'
 
 list-targets: ## List target names only
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_.-]+:.*## / {print $$1}' $(MAKEFILE_LIST)
@@ -127,7 +140,7 @@ inventory-quick: check-python ## Quick pass over AI tools, packages, services an
 		--monitor '$(MONITOR)' --monitor-host '$(MONITOR_HOST)' --monitor-port '$(MONITOR_PORT)' \
 		--monitor-keepalive '$(MONITOR_KEEPALIVE)' \
 		$(MONITOR_TOKEN_ARGS) \
-		$(EXTRA_ROOT_ARGS) $(EXCLUDE_ROOT_ARGS)
+		$(EXTRA_ROOT_ARGS) $(EXCLUDE_ROOT_ARGS) $(CONFIG_ARGS)
 
 inventory-full: check-python ## Bounded full scan of native WSL2 AI paths and CLI help trees
 	@$(PYTHON) '$(EXPORT_SCRIPT)' --profile full --output '$(INVENTORY_DIR)' \
@@ -139,16 +152,16 @@ inventory-full: check-python ## Bounded full scan of native WSL2 AI paths and CL
 		--monitor '$(MONITOR)' --monitor-host '$(MONITOR_HOST)' --monitor-port '$(MONITOR_PORT)' \
 		--monitor-keepalive '$(MONITOR_KEEPALIVE)' \
 		$(MONITOR_TOKEN_ARGS) \
-		$(EXTRA_ROOT_ARGS) $(EXCLUDE_ROOT_ARGS)
+		$(EXTRA_ROOT_ARGS) $(EXCLUDE_ROOT_ARGS) $(CONFIG_ARGS)
 
 inventory-only: check-python ## Inventory without invoking any AI CLI help command
 	@$(PYTHON) '$(EXPORT_SCRIPT)' --profile full --skip-cli-help --output '$(INVENTORY_DIR)' \
 		--max-total-entries '$(AI_MAX_ENTRIES)' --max-entries-per-root '$(AI_MAX_ENTRIES_PER_ROOT)' \
-		--monitor '$(MONITOR)' $(EXTRA_ROOT_ARGS) $(EXCLUDE_ROOT_ARGS)
+		--monitor '$(MONITOR)' $(EXTRA_ROOT_ARGS) $(EXCLUDE_ROOT_ARGS) $(CONFIG_ARGS)
 
 inventory-resume: check-python ## Resume matching full/quick inventory checkpoint
 	@$(PYTHON) '$(EXPORT_SCRIPT)' --profile '$(PROFILE)' --resume --output '$(INVENTORY_DIR)' \
-		--monitor '$(MONITOR)' $(EXTRA_ROOT_ARGS)
+		--monitor '$(MONITOR)' $(EXTRA_ROOT_ARGS) $(CONFIG_ARGS)
 
 # Explicit all-AI workflows. `ai-all` is the comprehensive bounded default.
 ai-all: inventory-full ## Discover all installed AI-named CLIs, packages, runtimes, containers, model artifacts and bounded help trees
@@ -209,14 +222,14 @@ model-validate: ## Validate model files without loading or deserializing weights
 
 model-download: ## Download one public HTTPS model with a required SHA-256
 	@test -n '$(DOWNLOAD_URL)' -a -n '$(DOWNLOAD_OUTPUT)' -a -n '$(DOWNLOAD_SHA256)' || { echo 'ERROR: set DOWNLOAD_URL, DOWNLOAD_OUTPUT and DOWNLOAD_SHA256' >&2; exit 2; }
-	@$(PYTHON) '$(MODEL_SCRIPT)' download --url '$(DOWNLOAD_URL)' --output '$(DOWNLOAD_OUTPUT)' --sha256 '$(DOWNLOAD_SHA256)' --max-bytes '$(DOWNLOAD_MAX_BYTES)'
+	@$(PYTHON) '$(MODEL_SCRIPT)' download --url '$(DOWNLOAD_URL)' --output '$(DOWNLOAD_OUTPUT)' --sha256 '$(DOWNLOAD_SHA256)' --max-bytes '$(DOWNLOAD_MAX_BYTES)' $(DOWNLOAD_ALLOW_HOST_ARGS)
 
 model-validate-ollama: ## Verify Ollama manifests/blobs (size + SHA-256); OLLAMA_MODELS_DIR optional
 	@$(PYTHON) '$(MODEL_SCRIPT)' ollama-validate $(OLLAMA_DIR_ARGS)
 
 # Free AI tool installer (explicit and dry-run by default)
 tools-list: ## List the free AI tool catalog and install status
-	@$(PYTHON) '$(INSTALLER_SCRIPT)' list
+	@$(PYTHON) '$(INSTALLER_SCRIPT)' list $(if $(TOOLS_CATEGORY),--category '$(TOOLS_CATEGORY)') $(if $(TOOLS_INSTALLED_ONLY),--installed) $(if $(TOOLS_MISSING_ONLY),--missing) $(if $(TOOLS_JSON),--json)
 
 tools-missing: ## List catalog tools that are not installed
 	@$(PYTHON) '$(INSTALLER_SCRIPT)' list --missing
@@ -226,16 +239,25 @@ tools-check: ## Validate installer catalog structure and argument safety
 
 tools-plan: ## Show the exact install command for TOOLS="a b" (never installs)
 	@test -n '$(strip $(TOOLS))' || { echo 'ERROR: set TOOLS="opencode aider"' >&2; exit 2; }
-	@$(PYTHON) '$(INSTALLER_SCRIPT)' plan $(TOOLS) $(TOOLS_MANAGER_ARGS) --log-dir '$(TOOLS_LOG_DIR)'
+	@$(PYTHON) '$(INSTALLER_SCRIPT)' plan $(TOOLS) $(TOOLS_MANAGER_ARGS) --log-dir '$(TOOLS_LOG_DIR)' $(TOOLS_TIMEOUT_ARGS)
 
 tools-install: ## Install TOOLS="a b" (dry-run unless APPLY=1)
 	@test -n '$(strip $(TOOLS))' || { echo 'ERROR: set TOOLS="opencode aider"' >&2; exit 2; }
 	@$(PYTHON) '$(INSTALLER_SCRIPT)' install $(TOOLS) $(TOOLS_MANAGER_ARGS) \
-		$(TOOLS_HASH_ARGS) --log-dir '$(TOOLS_LOG_DIR)' $(APPLY_ARGS)
+		$(TOOLS_HASH_ARGS) --log-dir '$(TOOLS_LOG_DIR)' $(TOOLS_TIMEOUT_ARGS) $(APPLY_ARGS)
 
 tools-script-hash: ## Download (not run) a tool's installer script and print its SHA-256; TOOLS=ollama
 	@test -n '$(strip $(TOOLS))' || { echo 'ERROR: set TOOLS=ollama' >&2; exit 2; }
 	@$(PYTHON) '$(INSTALLER_SCRIPT)' script-hash $(firstword $(TOOLS))
+
+tools-install-missing: ## Install all catalog tools that are not currently installed AND have an available package manager (dry-run unless APPLY=1)
+	@printf 'import sys, json, subprocess, shutil\nmissing_json = subprocess.check_output([sys.executable, "$(INSTALLER_SCRIPT)", "list", "--missing", "--json"], text=True)\nmissing = json.loads(missing_json)\navailable_managers = {m for m in ["npm", "pipx", "brew", "cargo", "go", "script"] if shutil.which(m)}\ninstallable = [t["id"] for t in missing if any(mgr in available_managers for mgr in t["managers"])]\nskipped = [t["id"] for t in missing if t["id"] not in installable]\nif skipped:\n    sys.stderr.write("Skipping (no available package manager): " + " ".join(skipped) + "\\n")\nif not installable:\n    print("No installable missing tools (all require unavailable package managers)")\n    sys.exit(0)\nprint(" ".join(installable))\n' > /tmp/filter_tools.py; \
+	$(PYTHON) /tmp/filter_tools.py > /tmp/installable_tools.txt; \
+	installable=$$(cat /tmp/installable_tools.txt); \
+	if [ -z "$$installable" ]; then exit 0; fi; \
+	echo "Installing: $$installable"; \
+	$(PYTHON) '$(INSTALLER_SCRIPT)' install $$installable $(TOOLS_MANAGER_ARGS) \
+		$(TOOLS_HASH_ARGS) --log-dir '$(TOOLS_LOG_DIR)' $(TOOLS_TIMEOUT_ARGS) $(APPLY_ARGS)
 
 show-config: ## Show resolved configuration (no secrets)
 	@printf '%-28s %s\n' \
@@ -243,7 +265,8 @@ show-config: ## Show resolved configuration (no secrets)
 		'INVENTORY_FILE' '$(INVENTORY_FILE)' 'PROFILE' '$(PROFILE)' \
 		'MONITOR' '$(MONITOR)' 'AI_MAX_ENTRIES' '$(AI_MAX_ENTRIES)' \
 		'AI_MAX_INVOCATIONS' '$(AI_MAX_INVOCATIONS)' 'AI_MAX_DEPTH' '$(AI_MAX_DEPTH)' \
-		'AI_EXTRA_ROOTS' '$(AI_EXTRA_ROOTS)'
+		'AI_EXTRA_ROOTS' '$(AI_EXTRA_ROOTS)' 'CONFIG_FILE' '$(CONFIG_FILE)' \
+		'TOOLS_TIMEOUT' '$(TOOLS_TIMEOUT)' 'DOWNLOAD_ALLOW_HOST' '$(DOWNLOAD_ALLOW_HOST)'
 
 clean: ## Remove only generated Python/test caches; preserve inventory and models
 	@find '$(SCRIPTS_DIR)' '$(TESTS_DIR)' -type d -name __pycache__ -prune -exec rm -rf {} +
