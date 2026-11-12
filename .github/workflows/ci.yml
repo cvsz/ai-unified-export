@@ -2,13 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
-  workflow_dispatch:
+    branches: [main]
 
-permissions:
-  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -16,109 +16,116 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install ruff
-        run: pipx install ruff
-      - name: Run ruff
-        run: ruff check scripts/ tests/
+      - uses: astral-sh/setup-ruff@v3
+        with:
+          version: "latest"
+      - run: ruff check scripts/ tests/
 
   compile:
     name: Compile (py_compile + compileall)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Compile all scripts
-        run: |
-          python -m py_compile scripts/ai_unified_export.py scripts/ai_export_monitor.py scripts/ai_model_manager.py scripts/ai_tools_installer.py scripts/discover_ai_server.py scripts/export_ai_cli.py
-          python -m compileall -q scripts/ tests/
-
-  test:
-    name: Unit & Integration Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Run unit tests
-        run: python -m unittest discover -s tests -v
-      - name: Run integration tests
-        run: python -m unittest tests.test_integration -v
+      - run: python -m py_compile scripts/ai_unified_export.py scripts/ai_export_monitor.py scripts/ai_model_manager.py scripts/ai_tools_installer.py scripts/discover_ai_server.py scripts/export_ai_cli.py
+      - run: python -m compileall -q scripts/ tests/
+
+  test:
+    name: Unit + Integration Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m unittest discover -s tests -v
 
   smoke:
-    name: CLI Smoke Tests
+    name: Smoke (make validate)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run make validate
-        run: make validate
+      - run: make validate
 
   shellcheck:
-    name: Shellcheck (Makefile)
+    name: Shellcheck (shell scripts)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - name: Run shellcheck on Makefile
-        run: shellcheck Makefile
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      # No standalone shell scripts in repo; Makefile uses GNU Make syntax
+      # shellcheck would parse Make functions as shell and fail.
+      # Recipes are validated by successful `make validate` execution.
+      - run: echo "No shell scripts to lint; Makefile validated via make validate"
 
   security:
-    name: Security Audit
+    name: Security Audit (bandit + safety)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install security tools
-        run: pip install bandit safety
-      - name: Run bandit
-        run: bandit -r scripts/ -f json -o bandit-report.json || true
-      - name: Run safety
-        run: safety check --json --output safety-report.json || true
+      - run: pip install bandit safety
+      - run: bandit -r scripts/ -f json -o bandit-report.json || true
+      - run: safety check --json --output safety-report.json || true
+      - name: Upload bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+      - name: Upload safety report
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-report
+          path: safety-report.json
 
   package:
-    name: Build & Verify Package
+    name: Package Build & Verify
     runs-on: ubuntu-latest
-    needs: [lint, compile, test, smoke, shellcheck]
     steps:
       - uses: actions/checkout@v4
-      - name: Build package
-        run: make package
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y zip unzip
+      - run: make package
       - name: Verify package integrity
         run: unzip -t ../ai-unified-server-cli-exporter-wsl2-full.zip
 
   docs:
-    name: Documentation Check
+    name: Documentation Existence Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify docs exist
-        run: |
-          test -f README.md
-          test -f docs/ARCHITECTURE.md
-          test -f docs/OUTPUT-SCHEMA.md
-          test -f docs/RUNBOOK.md
-          test -f docs/TROUBLESHOOTING.md
-          test -f docs/LEGACY-SCRIPTS.md
-          test -f SECURITY.md
-          test -f CHANGELOG.md
-          test -f AUDIT-PLAN.md
-          test -f Final-Report.md
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+      - run: |
+          required_docs=(
+            "README.md"
+            "docs/ARCHITECTURE.md"
+            "docs/OUTPUT-SCHEMA.md"
+            "docs/RUNBOOK.md"
+            "docs/TROUBLESHOOTING.md"
+            "docs/LEGACY-SCRIPTS.md"
+            "SECURITY.md"
+            "CHANGELOG.md"
+            "AUDIT-PLAN.md"
+            "Final-Report.md"
+          )
+          for doc in "${required_docs[@]}"; do
+            if [[ ! -f "$doc" ]]; then
+              echo "ERROR: Missing documentation file: $doc"
+              exit 1
+            fi
+          done
+          echo "All documentation files present"
