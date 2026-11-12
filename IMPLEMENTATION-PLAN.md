@@ -1,35 +1,66 @@
-# Implementation Plan — Enterprise-Grade Completion
+# Enterprise-Grade Implementation Plan
 
-## Baseline (already valid)
-- 57/57 unit tests OK; `py_compile` OK; `ruff` clean; `make validate` PASS
-- All AUDIT-PLAN.md fixes applied
-- Python stdlib only; WSL2 Ubuntu target; read-only inventory
+## Current Status (Baseline)
+- All 66 tests pass
+- `ruff check scripts/ tests/` - clean
+- `python -m py_compile` - clean
+- `make validate` - PASS
 
-## Goals (enterprise / production-grade)
-1. **Type safety**: TypedDicts + Protocols for all major data structures; eliminate unchecked `dict[str, Any]` at API boundaries.
-2. **Structured error handling**: custom exception hierarchy (ScopeError, ConfigError, BudgetError, ExportError) replacing ad-hoc ValueError/SystemExit at layer boundaries.
-3. **Configuration file**: optional `--config` (JSON/TOML via stdlib `tomllib`) providing defaults, CLI overrides win.
-4. **Integration tests**: end-to-end tests running real scripts with mocked subprocess, verifying output files and exit codes.
-5. **CI/CD**: GitHub Actions workflow (lint ruff, py_compile, unittest, smoke, shellcheck Makefile).
-6. **Operations docs**: RUNBOOK.md, TROUBLESHOOTING.md; refresh ARCHITECTURE.md / OUTPUT-SCHEMA.md.
-7. **Final-Report.md**: full validation summary, evidence, gate results.
-8. **Git/GH workflow**: init repo, commit as `cvsz` (GPG), open PR, audit/review/approve as `policedbc`, merge as `cvsz`.
+## Phase 1: Missing CI/CD Pipeline (Critical)
+- [ ] Create `.github/workflows/ci.yml` with:
+  - Ruff linting
+  - Python compilation (py_compile + compileall)
+  - Unit + integration tests
+  - Smoke tests (`make validate`)
+  - Shellcheck on Makefile
+  - Test on Python 3.10, 3.11, 3.12, 3.13, 3.14
 
-## Constraints (from AGENTS.md / zeaz.md)
-- Runtime deps: Python stdlib only (no new packages)
-- Validate: `python -m unittest discover -s tests -v` and `py_compile scripts/ai_unified_export.py scripts/ai_export_monitor.py`
-- Never scan /mnt, /proc, /sys, /dev; never collect env/secrets/process args
-- Do not claim WSL2 validation unless actually run on WSL2
-- Exporter/monitor read-only; installer dry-run by default, --apply required
+## Phase 2: Type Safety & Code Quality Improvements
+- [ ] Add comprehensive type hints to all public functions
+- [ ] Add `py.typed` marker for PEP 561 compliance
+- [ ] Improve error messages with structured exception context
+- [ ] Add runtime type validation for critical paths
+- [ ] Ensure all TypedDict contracts have total=False properly set
 
-## Phases
-1. Inspect & understand (complete)
-2. Type safety + structured errors in scripts/ (apply)
-3. Config file support (apply)
-4. Integration tests + CI workflow (apply)
-5. Operations docs + doc sync (apply)
-6. Test & verify: unittest, py_compile, ruff, make validate, smoke (verify)
-7. Final-Report.md (document)
-8. Git init, commit as cvsz, PR, audit as policedbc, merge as cvsz (document/apply)
+## Phase 3: Performance Optimizations
+- [ ] Optimize filesystem scanning with parallel root traversal
+- [ ] Add memoization for repeated path validations
+- [ ] Optimize regex compilation (pre-compile patterns)
+- [ ] Reduce memory footprint in monitor (bounded deques)
+- [ ] Add streaming JSON parsing for large outputs
 
-Status: All phases complete. PR #1 merged (cvsz → policedbc review → cvsz merge).
+## Phase 4: Robustness & Edge Cases
+- [ ] Add circuit breaker for external subprocess calls
+- [ ] Improve timeout handling with graceful degradation
+- [ ] Add better signal handling (SIGTERM, SIGINT)
+- [ ] Add input sanitization for all user-provided paths
+- [ ] Validate disk space before large operations
+
+## Phase 5: Documentation Completeness
+- [ ] Update all docs to match latest implementation
+- [ ] Add API reference documentation
+- [ ] Create migration guide from legacy scripts
+- [ ] Add architecture decision records (ADRs)
+- [ ] Update CHANGELOG with current changes
+
+## Phase 6: Extended Test Coverage
+- [ ] Add property-based tests for path validation
+- [ ] Add stress tests for large filesystems
+- [ ] Add fuzz tests for regex patterns
+- [ ] Add integration tests for monitor SSE endpoints
+- [ ] Add performance benchmarks
+
+## Phase 7: Final Validation & Release
+- [ ] Run full test suite on multiple Python versions
+- [ ] Run security audit (bandit, safety)
+- [ ] Generate final comprehensive report
+- [ ] Package and verify distributable
+- [ ] Update all documentation sync
+
+## Success Criteria
+- All 66+ tests pass
+- Zero linting warnings
+- Zero compilation errors
+- CI/CD pipeline passes
+- All documentation synchronized
+- Final-Report.md comprehensive and accurate

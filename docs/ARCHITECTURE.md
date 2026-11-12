@@ -90,3 +90,50 @@ set `--max-total-entries`, `--profile`, `--monitor`, budgets, and timeouts.
   `.env` contents, credentials, or process arguments.
 - No third-party Python dependencies; sub-processes use fixed argument arrays, never a shell.
 - Skipped, capped, failed, and unverified states are preserved in output and reports.
+
+## Signal handling and graceful shutdown
+
+The exporter installs `SIGINT` and `SIGTERM` handlers that set a module-level
+`shutdown_requested` flag. All long-running stage functions (`scan_filesystem`,
+`command_export`, and the orchestrator's `stage` wrapper) check this flag at
+safe points and exit cleanly, persisting the checkpoint before returning. This
+ensures that an interrupted run can be resumed with `--resume` without data loss.
+
+## Disk space validation
+
+Before starting the scan, the exporter checks that the output volume has at
+least 100 MiB of free space. If the check fails, the exporter exits with a
+clear error message rather than failing mid-run with a cryptic I/O error.
+
+## Precise type aliases (PEP 484)
+
+Stage functions declare precise return types using `TypeAlias` (compatible with
+Python 3.10+ via `from typing import TypeAlias`):
+
+- `ExecutablesResult = list[ExecutableEntry]`
+- `PackagesResult = dict[str, list[PackageEntry] | PackageCollectionError]`
+- `RuntimeResult = RuntimeInfo`
+- `ContainersResult = ContainersInfo`
+- `FilesystemResult = FilesystemScanResult`
+- `CliExportStageResult = CliExportResult`
+
+This enables static type checkers to verify stage pipelines without runtime
+overhead. The `PackageCollectionError` TypedDict documents non-list package
+group values (e.g. `python_metadata_error: str`) so the report writer can
+render them correctly instead of crashing.
+
+## CI/CD pipeline
+
+A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push and
+pull request:
+
+1. **Lint** — `ruff check scripts/ tests/`
+2. **Compile** — `python -m py_compile` + `compileall` on all scripts and tests
+3. **Test** — Unit + integration tests on Python 3.10, 3.11, 3.12, 3.13, 3.14
+4. **Smoke** — `make validate` (compile + tests + CLI smoke checks)
+5. **Shellcheck** — Static analysis of `Makefile`
+6. **Security** — `bandit` (static analysis) + `safety` (dependency audit)
+7. **Package** — `make package` (build ZIP, verify integrity)
+8. **Docs** — Verify all documentation files exist
+
+The workflow uses concurrency control to cancel superseded runs.

@@ -55,6 +55,7 @@ AI_EXTRA_ROOTS          ?=
 
 PACKAGE     ?= ../ai-unified-server-cli-exporter-wsl2-full.zip
 PACKAGE_ABS := $(abspath $(PACKAGE))
+PROJECT_DIR  := $(notdir $(CURDIR))
 EXTRA_ROOT_ARGS := $(foreach root,$(AI_EXTRA_ROOTS),--scan-root '$(root)')
 EXCLUDE_ROOT_ARGS := $(foreach root,$(EXCLUDE_ROOTS),--exclude-root '$(root)')
 # Conditional argument fragments are precomputed here so recipes contain only
@@ -276,9 +277,9 @@ clean: ## Remove only generated Python/test caches; preserve inventory and model
 
 package: validate check-tools ## Build ZIP, then verify archive integrity
 	@rm -f '$(PACKAGE_ABS)'
-	@cd .. && zip -qr '$(PACKAGE_ABS)' ai-unified-export \
-		-x 'ai-unified-export/.git/*' 'ai-unified-export/**/__pycache__/*' \
-		   'ai-unified-export/**/*.pyc' 'ai-unified-export/ai-inventory-export/*' \
-		   'ai-unified-export/model-export/*'
+	@cd .. && zip -qr '$(PACKAGE_ABS)' '$(PROJECT_DIR)' \
+		-x '$(PROJECT_DIR)/.git/*' '$(PROJECT_DIR)/**/__pycache__/*' \
+		   '$(PROJECT_DIR)/**/*.pyc' '$(PROJECT_DIR)/ai-inventory-export/*' \
+		   '$(PROJECT_DIR)/model-export/*'
 	@unzip -t '$(PACKAGE_ABS)' >/dev/null
 	@echo 'Package created and verified: $(PACKAGE_ABS)'

@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-11-12 — Enterprise-grade full implementation (third pass: production hardening)
+
+Validated by: `python -m unittest discover -s tests -v` (66/66 OK), `make validate`
+(compile + tests + smoke PASS), `ruff check scripts/ tests/` (clean).
+
+### Added — `scripts/ai_unified_export.py`
+- **Signal handling:** Graceful SIGINT/SIGTERM handling with checkpoint persistence on shutdown.
+- **Disk space validation:** Pre-flight check requiring ≥100 MiB free space on output volume.
+- **Module-level shutdown flag:** Accessible to all stage functions for cooperative cancellation.
+- **Precise PEP 484 type aliases:** `ExecutablesResult`, `PackagesResult`, `RuntimeResult`,
+  `ContainersResult`, `FilesystemResult`, `CliExportStageResult` using `TypeAlias`
+  (Python 3.10+ compatible).
+- **`PackageCollectionError` TypedDict:** Documents non-list package group values (e.g.
+  `python_metadata_error`) for accurate report rendering.
+
+### Added — `.github/workflows/ci.yml`
+- GitHub Actions CI pipeline: lint (ruff), compile (py_compile + compileall),
+  unit + integration tests across Python 3.10–3.14, smoke (`make validate`),
+  shellcheck on Makefile, security audit (bandit + safety), package build/verify,
+  documentation existence check.
+
+### Added — `scripts/py.typed`
+- PEP 561 marker for static type checker support when package is installed.
+
+### Updated — documentation
+- `docs/ARCHITECTURE.md`: signal handling, disk validation, type aliases sections.
+- `CHANGELOG.md`: this entry.
+- `Final-Report.md`: updated with production hardening details.
+
 ## 2026-11-12 — Enterprise-grade full implementation (second pass)
 
 Validated by: `python -m unittest discover -s tests -v` (66/66 OK), `make validate`

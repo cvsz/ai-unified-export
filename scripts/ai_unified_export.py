@@ -15,15 +15,20 @@ import os
 import platform
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, TypeAlias, TypedDict
 
 from ai_export_monitor import ExportMonitor
 
 SCHEMA_VERSION = 4
+
+# Module-level shutdown flag for graceful signal handling.
+# Tests that call stage functions directly will not set this, so it defaults to False.
+shutdown_requested = {"flag": False}
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +76,11 @@ class PackageEntry(TypedDict, total=False):
     name: str
     version: str
     location: str
+
+
+class PackageCollectionError(TypedDict, total=False):
+    """Non-list package group value indicating a collection error."""
+    error: str
 
 
 class ProcessEntry(TypedDict, total=False):
@@ -164,12 +174,13 @@ class InventoryData(TypedDict, total=False):
     scan_roots: list[str]
     scan_exclusions: list[str]
     executables: list[ExecutableEntry]
-    packages: dict[str, Any]
+    packages: dict[str, list[PackageEntry] | PackageCollectionError]
     runtime: RuntimeInfo
     containers: ContainersInfo
     filesystem_scan: FilesystemScanResult
     cli_export: CliExportResult
     duration_seconds: float
+    config_source: str | None
 
 
 class CheckpointData(TypedDict, total=False):
@@ -177,6 +188,18 @@ class CheckpointData(TypedDict, total=False):
     fingerprint: str
     updated_at: int
     stages: dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# Precise return type aliases for stage functions (PEP 484 compatible).
+# ---------------------------------------------------------------------------
+
+ExecutablesResult: TypeAlias = list[ExecutableEntry]
+PackagesResult: TypeAlias = dict[str, list[PackageEntry] | PackageCollectionError]
+RuntimeResult: TypeAlias = RuntimeInfo
+ContainersResult: TypeAlias = ContainersInfo
+FilesystemResult: TypeAlias = FilesystemScanResult
+CliExportStageResult: TypeAlias = CliExportResult
 AI_NAME_RE = re.compile(
     r"(?:^|[-_.])(ai|llm|gpt|claude|codex|gemini|copilot|opencode|aider|"
     r"ollama|llama|mistral|qwen|deepseek|huggingface|transformers|"
@@ -456,8 +479,8 @@ def is_windows_pe(path: str) -> bool:
     except OSError:
         return False
 
-def discover_executables() -> list[dict[str, Any]]:
-    found: dict[str, dict[str, Any]] = {}
+def discover_executables() -> ExecutablesResult:
+    found: dict[str, ExecutableEntry] = {}
     search_path = os.pathsep.join(native_path_entries())
     # Resolve explicit well-known entry points first, including tools whose names
     # do not contain an obvious AI token (for example `lms`).
@@ -526,8 +549,8 @@ def discover_executables() -> list[dict[str, Any]]:
                                     "source": "npm-package-entry", "kind": "node-entrypoint"})
     return sorted(found.values(), key=lambda x: x["name"].casefold())
 
-def package_inventory(quick: bool = False) -> dict[str, Any]:
-    result: dict[str, Any] = {"dpkg": [], "snap": [], "npm_global": [],
+def package_inventory(quick: bool = False) -> PackagesResult:
+    result: PackagesResult = {"dpkg": [], "snap": [], "npm_global": [],
                               "cargo": [], "python_metadata": []}
     dpkg = run(["dpkg-query", "-W", "-f=${binary:Package}\t${Version}\n"], 5 if quick else 12)
     if dpkg.get("returncode") == 0:
@@ -582,8 +605,8 @@ def parse_json_lines(output: str) -> list[dict[str, Any]]:
             continue
     return rows
 
-def container_inventory(quick: bool = False) -> dict[str, Any]:
-    out: dict[str, Any] = {
+def container_inventory(quick: bool = False) -> ContainersResult:
+    out: ContainersResult = {
         "docker_containers": [], "docker_images": [],
         "podman_containers": [], "podman_images": [],
     }
@@ -605,8 +628,8 @@ def container_inventory(quick: bool = False) -> dict[str, Any]:
             ]
     return out
 
-def system_runtime_inventory(quick: bool = False) -> dict[str, Any]:
-    processes = []
+def system_runtime_inventory(quick: bool = False) -> RuntimeResult:
+    processes: list[ProcessEntry] = []
     command_timeout = 3 if quick else 8
     ps = run(["ps", "-eo", "pid=,comm="], command_timeout)
     if ps.get("returncode") == 0:
@@ -668,8 +691,13 @@ def root_allowed(path: Path) -> bool:
 
 def scan_filesystem(roots: list[str], max_total: int, max_per_root: int,
                     monitor: ExportMonitor | None = None,
-                    exclusions: list[str] | None = None) -> dict[str, Any]:
-    dirs, artifacts, models, manifests = [], [], [], []
+                    exclusions: list[str] | None = None) -> FilesystemResult:
+    global shutdown_requested
+    shutdown_requested["flag"] = False  # Reset for test isolation
+    dirs: list[dict[str, str]] = []
+    artifacts: list[dict[str, Any]] = []
+    models: list[ModelArtifact] = []
+    manifests: list[dict[str, Any]] = []
     coverage = []
     total = 0
     seen_files: set[str] = set()
@@ -691,6 +719,8 @@ def scan_filesystem(roots: list[str], max_total: int, max_per_root: int,
         if monitor:
             monitor.stage("filesystem", "running", min(95, total / max_total * 100), f"Scanning {root}")
         while q and total < max_total and local_count < max_per_root:
+            if shutdown_requested["flag"]:
+                break
             current = q.popleft()
             try:
                 real = str(current.resolve(strict=True))
@@ -810,13 +840,15 @@ def parse_child_commands(help_text: str) -> list[str]:
                 children.add(token)
     return sorted(children)
 
-def command_export(executables: list[dict[str, Any]], out_dir: Path,
+def command_export(executables: ExecutablesResult, out_dir: Path,
                    max_invocations: int, per_tool: int, max_depth: int,
-                   timeout: float, monitor: ExportMonitor | None = None) -> dict[str, Any]:
+                   timeout: float, monitor: ExportMonitor | None = None) -> CliExportStageResult:
+    global shutdown_requested
+    shutdown_requested["flag"] = False  # Reset for test isolation
     raw_dir = out_dir / "cli-help"
     raw_dir.mkdir(parents=True, exist_ok=True)
     queue = collections.deque()
-    tool_stats: dict[str, dict[str, Any]] = {}
+    tool_stats: dict[str, CliToolStats] = {}
     seen: set[tuple[str, tuple[str, ...]]] = set()
     for tool in executables:
         name = tool["name"]
@@ -828,6 +860,8 @@ def command_export(executables: list[dict[str, Any]], out_dir: Path,
             monitor.tool_status(name, "pending")
     total = 0
     while queue and total < max_invocations:
+        if shutdown_requested["flag"]:
+            break
         name, executable, args, depth = queue.popleft()
         key = (name, args)
         if key in seen:
@@ -926,7 +960,7 @@ def command_export(executables: list[dict[str, Any]], out_dir: Path,
         ),
     }
 
-def write_reports(out_dir: Path, data: dict[str, Any]) -> None:
+def write_reports(out_dir: Path, data: InventoryData) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "ai-inventory.json").write_text(
         json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -1058,6 +1092,27 @@ def main() -> int:
     host = validate_host()
     output = Path(args.output).expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
+
+    # Validate disk space before starting (require at least 100 MiB free)
+    try:
+        disk = shutil.disk_usage(output)
+        if disk.free < 100 * 1024 * 1024:
+            parser.error(f"Insufficient disk space: {disk.free / 1024 / 1024:.0f} MiB free, need at least 100 MiB")
+    except OSError:
+        pass  # Best effort only
+
+    # Signal handling for graceful shutdown
+    global shutdown_requested
+    shutdown_requested["flag"] = False
+
+    def _signal_handler(signum: int, _frame: Any) -> None:
+        shutdown_requested["flag"] = True
+        if monitor:
+            monitor.finish("interrupted", f"Received signal {signum}")
+
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+
     try:
         monitor = None if args.monitor == "off" else ExportMonitor(
             output, args.monitor, args.monitor_host, args.monitor_port, args.monitor_token_file
@@ -1119,6 +1174,9 @@ def main() -> int:
         os.replace(temporary, checkpoint_path)
 
     def stage(name: str, fn: Any) -> Any:
+        global shutdown_requested
+        if shutdown_requested["flag"]:
+            raise KeyboardInterrupt("Shutdown requested")
         if name in saved:
             if monitor:
                 monitor.stage(name, "cached", 100, "Restored from matching checkpoint")
