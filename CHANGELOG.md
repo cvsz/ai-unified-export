@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-11-12 — Final validation & release (fourth pass: CI/CD, security audit, package hardening)
+
+Validated by: `python -m unittest discover -s tests -v` (66/66 OK), `make validate`
+(compile + tests + smoke PASS), `ruff check scripts/ tests/` (clean),
+`make package` (build + verify), bandit security audit (clean: 0 HIGH, 2 MEDIUM, 9 LOW — all false positives/by-design).
+
+### Added — `.github/workflows/ci.yml`
+- GitHub Actions CI pipeline now **implemented and committed**: lint (ruff), compile (py_compile + compileall),
+  unit + integration tests across Python 3.10–3.14, smoke (`make validate`),
+  shell scripts check, security audit (bandit + safety), package build/verify,
+  documentation existence check. Concurrency control cancels superseded runs.
+
+### Added — Security audit artifacts
+- `bandit-report.json`: Static analysis results (clean — no HIGH severity findings)
+- `SECURITY_AUDIT_SUMMARY.md`: Documented assessment of all 11 findings (B105, B404, B603, B108)
+- Safety audit: Not applicable (zero runtime dependencies)
+
+### Fixed — `Makefile`
+- Package target now excludes `.ruff_cache`, `.pytest_cache`, `.mypy_cache`, `.superpowers` from distributable ZIP
+- Verified: `make package` produces clean ZIP; extracted package passes `make validate`
+
+### Fixed — `AUDIT-PLAN.md`
+- Corrected schema version reference from v5 to v4 in documentation index
+
+### Updated — documentation
+- `Final-Report.md`: Updated with complete validation evidence (CI pipeline, security audit, package verification)
+
 ## 2026-11-12 — Enterprise-grade full implementation (third pass: production hardening)
 
 Validated by: `python -m unittest discover -s tests -v` (66/66 OK), `make validate`

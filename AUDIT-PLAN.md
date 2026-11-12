@@ -48,7 +48,7 @@ Baseline (validated): `python -m unittest discover -s tests -v` → 43/43 OK; `p
 
 ## Missing documentation to add
 - `docs/ARCHITECTURE.md` — module map, pipeline, monitor/checkpoint design.
-- `docs/OUTPUT-SCHEMA.md` — `ai-inventory.json` schema v5 field reference.
+- `docs/OUTPUT-SCHEMA.md` — `ai-inventory.json` schema v4 field reference.
 - `docs/LEGACY-SCRIPTS.md` — status and known limits of the two legacy scripts.
 - `SECURITY.md` — threat model and safety controls.
 - `CHANGELOG.md` — this update.
